@@ -105,9 +105,14 @@ const formatDate = (dateString: string) => {
 const ProductDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const [product, setProduct] = useState<ProductType | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
+    const [loading, setLoading] = useState<boolean>(false);
 
     useEffect(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }, []);
+
+    useEffect(() => {
+        setLoading(true);
         fetch(`https://dummyjson.com/products/${id}`)
             .then((res) => res.json())
             .then((data) => {

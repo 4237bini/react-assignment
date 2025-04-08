@@ -34,7 +34,7 @@ const App: React.FC = () => {
                         display: isProductListVisible ? 'block' : 'none',
                     }}
                 >
-                    <ProductList />
+                    <ProductList onProductClick={() => setProductListVisible(false)} />
                 </div>
             </div>
 

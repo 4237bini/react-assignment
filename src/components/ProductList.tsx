@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import styled from "styled-components";
-import { Skeleton } from "@mui/material";
+import { Button, Skeleton } from "@mui/material";
 
 interface ProductType {
     id: number;
@@ -102,30 +102,41 @@ const Availability = styled.span<{ status: string }>`
     color: ${(props) => (props.status === "In Stock" ? "green" : "red")};
 `;
 
-const ProductList = () => {
+interface ProductListProps {
+    onProductClick?: () => void;
+}
+
+const ProductList: React.FC<ProductListProps> = ({ onProductClick }) => {
     const [products, setProducts] = useState<ProductType[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [page, setPage] = useState<number>(1);
     const productsPerPage = 10;
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetch("https://dummyjson.com/products")
-            .then((res) => res.json())
-            .then((data) => {
-                const updatedProducts = data.products.map((product: ProductType) => ({
-                    ...product,
-                    minimumOrderQuantity: Math.floor(Math.random() * 5) + 1,
-                    availabilityStatus: product.stock > 0 ? "In Stock" : "Out of Stock"
-                }));
-
-                setProducts(updatedProducts);
+            .then(res => res.json())
+            .then(data => {
+                setProducts(data.products || []);
                 setLoading(false);
             })
-            .catch((error) => {
+            .catch(error => {
                 console.error("Error fetching products:", error);
                 setLoading(false);
             });
     }, []);
+
+    const indexOfLastProduct = page * productsPerPage;
+    const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+    const currentProducts = products.slice(indexOfFirstProduct, indexOfLastProduct);
+    const totalPages = Math.ceil(products.length / productsPerPage);
+
+    const handleProductClick = (id: number) => {
+        if (window.innerWidth <= 768 && onProductClick) {
+            onProductClick(); // hide list on mobile
+        }
+        navigate(`/product/${id}`);
+    };
 
     if (loading) {
         return (
@@ -137,47 +148,31 @@ const ProductList = () => {
         );
     }
 
-    const indexOfLastProduct = page * productsPerPage;
-    const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-    const currentProducts = products.slice(indexOfFirstProduct, indexOfLastProduct);
-
     return (
         <Container>
             {currentProducts.length > 0 ? (
-                currentProducts.map((product) => {
-                    const discountedPrice = (product.price * (1 - product.discountPercentage / 100)).toFixed(2);
-                    return (
-                        <Link key={product.id} to={`/product/${product.id}`} style={{ textDecoration: "none" }}>
-                            <ProductCard>
-                                <Thumbnail src={product.thumbnail || ""} alt={product.title || "No Title"} />
-                                <ProductInfo>
-                                    <strong>{product.title || "No Title"}</strong>
-                                    <p>{product.category} | {product.brand}</p>
-                                    <PriceContainer>
-                                        <OldPrice>${product.price.toFixed(2)}</OldPrice>
-                                        <NewPrice>${discountedPrice}</NewPrice>
-                                    </PriceContainer>
-                                    <p>Min Order: {product.minimumOrderQuantity}</p>
-                                    <p>Stock: {product.stock}</p>
-                                    <Availability status={product.availabilityStatus}>{product.availabilityStatus}</Availability>
-                                    <RatingStars>{"★".repeat(Math.floor(product.rating))}{"☆".repeat(5 - Math.floor(product.rating))}</RatingStars>
-                                </ProductInfo>
-                            </ProductCard>
-                        </Link>
-                    );
-                })
+                currentProducts.map((product) => (
+                    <ProductCard key={product.id} onClick={() => handleProductClick(product.id)}>
+                        <Thumbnail src={product.thumbnail || ""} alt={product.title || "No Title"} />
+                        <ProductInfo>
+                            <strong>{product.title || "No Title"}</strong>
+                            <p>{product.category || "Unknown"} | {product.brand || "Unknown"}</p>
+                            <p>Price: ${product.price || 0} (Discount: {product.discountPercentage || 0}%)</p>
+                            <p>Stock: {product.stock || 0} | Rating: {product.rating || "N/A"}</p>
+                        </ProductInfo>
+                    </ProductCard>
+                ))
             ) : (
                 <p>No products available.</p>
             )}
 
             <Pagination>
-                <PageButton disabled={page === 1} onClick={() => setPage(page - 1)}>← Prev</PageButton>
-                <span> Page {page} </span>
-                <PageButton disabled={indexOfLastProduct >= products.length} onClick={() => setPage(page + 1)}>Next →</PageButton>
+                <Button disabled={page === 1} onClick={() => setPage(page - 1)}>Prev</Button>
+                <span> Page {page} of {totalPages} </span>
+                <Button disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Next</Button>
             </Pagination>
         </Container>
     );
 };
 
 export default ProductList;
-
